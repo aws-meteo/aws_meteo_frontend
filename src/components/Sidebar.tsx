@@ -30,7 +30,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
                 const { toast } = await import('sonner');
                 const { useAppStore } = await import('@/store/useAppStore');
 
-                const url = import.meta.env.VITE_STI_API_URL;
+                const url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
                 toast.info(`Probando conexión a: ${url}...`);
 
                 try {

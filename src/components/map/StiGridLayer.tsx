@@ -92,7 +92,7 @@ const StiGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) =>
                 <div class="p-2 text-xs font-mono">
                     <p><strong>Lat:</strong> ${p.lat.toFixed(4)}</p>
                     <p><strong>Lng:</strong> ${p.lng.toFixed(4)}</p>
-                    <p><strong>Int:</strong> ${p.intensity.toFixed(4)}</p>
+                    <p><strong>STI:</strong> ${p.rawValue.toFixed(2)}</p>
                     <p><strong>Sev:</strong> ${getSeverityLabel(p.severity)}</p>
                 </div>
             `;

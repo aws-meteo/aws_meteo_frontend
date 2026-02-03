@@ -50,7 +50,7 @@ export function transformToHeatmapPoints(
     const validRange = typeof min === 'number' && typeof max === 'number';
 
     // CLAMP LIMITS
-    const CLAMP_MIN = -8.0;
+    const CLAMP_MIN = -50.0;
     const CLAMP_MAX = 8.0;
 
     // Calculate effective min/max for normalization, respecting the clamp limits
@@ -129,7 +129,7 @@ export function categorizeSeverity(value: number): SeverityLevel {
  * Uses raw STI value
  */
 export function isExtremeHeat(value: number): boolean {
-    return value >= 3.0; // Heatwave starts at +3 based on user input
+    return value >= 2.0; // Heatwave starts at +3 based on user input
 }
 
 /**
@@ -137,7 +137,7 @@ export function isExtremeHeat(value: number): boolean {
  * Uses raw STI value
  */
 export function isExtremeCold(value: number): boolean {
-    return value <= -3.0; // Frost starts at -3 based on user input
+    return value <= -30.0; // Frost starts at -3 based on user input
 }
 
 /**

@@ -80,8 +80,8 @@ const NewRisksTab = () => {
                                                 <div
                                                     key={lvl}
                                                     className={`w-1.5 h-3 rounded-sm ${lvl <= risk.level
-                                                            ? RISK_COLORS[risk.level as keyof typeof RISK_COLORS]
-                                                            : 'bg-muted'
+                                                        ? RISK_COLORS[risk.level as keyof typeof RISK_COLORS]
+                                                        : 'bg-muted'
                                                         }`}
                                                 />
                                             ))}

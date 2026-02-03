@@ -936,8 +936,8 @@ const MapView = () => {
               <div className="h-4 w-px bg-white/20" />
               <div className="flex items-center gap-2">
                 <span className="text-gray-400">STI:</span>
-                <span className={hoveredPoint.intensity > 0.8 ? 'text-red-400 font-bold' : hoveredPoint.intensity < 0.2 ? 'text-blue-400 font-bold' : 'text-green-400'}>
-                  {hoveredPoint.intensity.toFixed(3)}
+                <span className={hoveredPoint.rawValue >= 3.0 ? 'text-red-400 font-bold' : hoveredPoint.rawValue <= -3.0 ? 'text-blue-400 font-bold' : 'text-green-400'}>
+                  {hoveredPoint.rawValue.toFixed(2)}
                 </span>
               </div>
               <div className="h-4 w-px bg-white/20" />
