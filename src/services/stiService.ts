@@ -124,9 +124,34 @@ export const getSEPISubset = async (
     return getSTISubset(run, step, bounds);
 };
 
+export const getHistoricT2M = async (
+    points: { lat: number; lon: number }[],
+    units: 'C' | 'K' = 'C'
+): Promise<any> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/historic/t2m`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ points, units })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching historic T2M data:', error);
+        throw error;
+    }
+};
+
 export const stiService = {
     getRuns,
     getStepsForRun,
     getSTISubset,
-    getSEPISubset
+    getSEPISubset,
+    getHistoricT2M
 };
