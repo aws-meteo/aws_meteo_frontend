@@ -1,0 +1,55 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main # Asegúrate de que esta rama sea la correcta (main o master)
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to AWS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Linter Check
+        run: npm run lint
+
+      # Compilación pura de Vite
+      - name: Build Frontend (Vite)
+        env:
+          VITE_USE_MOCK_DATA: 'true' 
+          # Estas variables pueden estar vacías por ahora, pero las inyectamos
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Sincronizar archivos con S3
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
+
+      - name: Invalidar caché de CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_ID }} --paths "/*"

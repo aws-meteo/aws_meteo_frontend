@@ -6,8 +6,8 @@ import { UserProfile } from "@/types/user";
 // Configuration
 // ===========================================
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_DATA === 'true';
-const API_URL = import.meta.env.VITE_API_URL || '';
 const STI_API_URL = import.meta.env.VITE_STI_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || STI_API_URL;
 
 // ===========================================
 // Types
