@@ -1,108 +1,87 @@
-# 🌾 AgroRisk - Sistema de Gestión de Riesgos Agroclimáticos
+# AWS Meteo Frontend
 
-Sistema de monitoreo y gestión de riesgos climatológicos para la agricultura, con mapas interactivos, análisis de riesgos en tiempo real y asistente de IA.
+Real-time agricultural risk monitoring platform. Interactive maps, climate risk analysis, and AI-powered insights for farm management.
 
 ![React](https://img.shields.io/badge/React-18-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Vite](https://img.shields.io/badge/Vite-5-purple)
 ![Tailwind](https://img.shields.io/badge/Tailwind-3-cyan)
+![Leaflet](https://img.shields.io/badge/Leaflet-Maps-green)
 
-## 📋 Tabla de Contenidos
+## Features
 
-- [Características](#-características)
-- [Requisitos](#-requisitos)
-- [Instalación](#-instalación)
-- [Configuración del Backend](#-configuración-del-backend)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [API Endpoints](#-api-endpoints)
-- [Deploy en AWS](#-deploy-en-aws)
+- 🗺️ **Interactive Maps** - Leaflet-based visualization with drawing tools
+- 🌡️ **Risk Heatmaps** - Drought, frost, flood, and custom risk layers
+- 📊 **Analytics Dashboard** - Real-time metrics and risk forecasting
+- 🤖 **AI Assistant** - Context-aware recommendations
+- 👥 **User Management** - Role-based access, profiles, preferences
+- 📱 **Responsive** - Mobile-first design
+- 🔐 **Secure Auth** - Supabase or AWS Cognito integration
 
----
+## Quick Start
 
-## ✨ Características
-
-- 🗺️ **Mapas Interactivos** - Visualización de predios y potreros con Leaflet
-- 🌡️ **Heatmaps de Riesgos** - Capas de calor para sequía, heladas, inundaciones
-- 📊 **Dashboard Analítico** - Estadísticas y métricas de riesgos
-- 🤖 **Asistente IA** - Chat inteligente para recomendaciones
-- 👤 **Sistema de Usuarios** - Autenticación completa con roles
-- 📱 **Responsive** - Optimizado para móvil y desktop
-
----
-
-## 📦 Requisitos
-
+### Prerequisites
 - Node.js 18+
-- npm o yarn
-- Cuenta en Supabase (o backend propio en AWS)
+- npm/yarn
+- Backend: Supabase or custom API
 
----
-
-## 🚀 Instalación
+### Installation
 
 ```bash
-# Clonar el repositorio
-git clone <url-del-repo>
-cd agrorisk-frontend
+git clone <repo-url>
+cd aws_meteo_frontend
 
-# Instalar dependencias
 npm install
-
-# Copiar variables de entorno
 cp .env.example .env.local
-
-# Iniciar en desarrollo
+# Fill in your API credentials
 npm run dev
 ```
 
----
+Open `http://localhost:5173`
 
-## ⚙️ Configuración del Backend
+## Configuration
 
-### Variables de Entorno
-
-Crea un archivo `.env.local` con las siguientes variables:
+### Environment Variables
 
 ```env
-# ============================================
-# Supabase (Recomendado para inicio rápido)
-# ============================================
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key
+# API
+VITE_API_URL=https://your-api.com
+VITE_API_TIMEOUT=30000
 
-# ============================================
-# API Custom (Si usas backend propio)
-# ============================================
-VITE_API_URL=https://api.tudominio.com
+# Supabase (Primary)
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 
-# ============================================
-# Feature Flags
-# ============================================
-VITE_USE_MOCK_DATA=false  # true para desarrollo sin backend
+# AWS Cognito (Alternative)
+# VITE_AWS_REGION=us-east-1
+# VITE_COGNITO_USER_POOL_ID=xxx
+# VITE_COGNITO_CLIENT_ID=xxx
+
+# Features
+VITE_USE_MOCK_DATA=false  # true for dev without backend
+VITE_ENABLE_ANALYTICS=true
 ```
 
-### Esquema de Base de Datos
+### Database Setup (Supabase)
 
-Ejecuta este SQL en Supabase o tu base de datos PostgreSQL:
+Run this SQL in Supabase dashboard:
 
 ```sql
--- Tabla de Perfiles de Usuario
+-- User profiles
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   company TEXT,
-  phone TEXT,
   avatar_url TEXT,
   role TEXT DEFAULT 'viewer',
   preferences JSONB DEFAULT '{}',
-  onboarding JSONB DEFAULT '{"completed": false, "currentStep": 0, "completedSteps": [], "skipped": false}',
-  metadata JSONB DEFAULT '{}',
+  onboarding JSONB DEFAULT '{"completed": false, "currentStep": 0}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabla de Predios
+-- Farm parcels
 CREATE TABLE parcels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -113,7 +92,7 @@ CREATE TABLE parcels (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabla de Potreros
+-- Sub-sections of parcels
 CREATE TABLE paddocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID REFERENCES parcels(id) ON DELETE CASCADE,
@@ -122,206 +101,144 @@ CREATE TABLE paddocks (
   geojson JSONB NOT NULL,
   crop_type TEXT,
   irrigation_type TEXT,
-  description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para mejor rendimiento
-CREATE INDEX idx_parcels_user_id ON parcels(user_id);
-CREATE INDEX idx_paddocks_parcel_id ON paddocks(parcel_id);
-
--- Row Level Security (RLS)
+-- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parcels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paddocks ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acceso
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can view own parcels" ON parcels FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage paddocks in own parcels" ON paddocks FOR ALL 
+-- Access policies
+CREATE POLICY "Users see own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users manage own parcels" ON parcels FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users manage own paddocks" ON paddocks FOR ALL 
   USING (parcel_id IN (SELECT id FROM parcels WHERE user_id = auth.uid()));
 ```
 
----
-
-## 🔌 API Endpoints
-
-### Autenticación (`/auth`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/auth/signup` | Registro de usuario |
-| POST | `/auth/login` | Iniciar sesión |
-| POST | `/auth/logout` | Cerrar sesión |
-| GET | `/auth/session` | Verificar sesión actual |
-
-### Perfiles (`/profiles`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/profiles/:id` | Obtener perfil de usuario |
-| PUT | `/profiles/:id` | Actualizar perfil |
-| PATCH | `/profiles/:id/onboarding` | Actualizar estado de onboarding |
-
-### Predios (`/parcels`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/parcels` | Listar todos los predios del usuario |
-| POST | `/parcels` | Crear nuevo predio |
-| GET | `/parcels/:id` | Obtener predio específico |
-| PUT | `/parcels/:id` | Actualizar predio |
-| DELETE | `/parcels/:id` | Eliminar predio |
-
-**Body para crear predio:**
-```json
-{
-  "name": "Predio Norte",
-  "area": 150.5,
-  "geojson": {
-    "type": "Polygon",
-    "coordinates": [[[-70.5, -33.4], [-70.4, -33.4], [-70.4, -33.3], [-70.5, -33.3], [-70.5, -33.4]]]
-  },
-  "color": "#3b82f6"
-}
-```
-
-### Potreros (`/paddocks`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/parcels/:parcelId/paddocks` | Crear potrero en un predio |
-| PUT | `/paddocks/:id` | Actualizar potrero |
-| DELETE | `/paddocks/:id` | Eliminar potrero |
-
-**Body para crear potrero:**
-```json
-{
-  "name": "Potrero A",
-  "area": 25.3,
-  "geojson": { "type": "Polygon", "coordinates": [...] },
-  "crop_type": "wheat",
-  "irrigation_type": "drip",
-  "description": "Zona de cultivo principal"
-}
-```
-
-### Riesgos (`/risks`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/risks/heatmap?type=drought` | Datos de mapa de calor |
-| GET | `/risks/forecast?parcel_id=xxx` | Pronóstico de riesgos |
-
-### Chat IA (`/chat`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/chat/message` | Enviar mensaje al asistente |
-| GET | `/chat/history` | Obtener historial de chat |
-
-**Body para mensaje:**
-```json
-{
-  "message": "¿Qué cultivos recomiendas para mi zona?",
-  "context": {
-    "parcel_id": "uuid",
-    "current_risks": ["drought"]
-  }
-}
-```
-
----
-
-## 📁 Estructura del Proyecto
+## Project Structure
 
 ```
 src/
-├── components/          # Componentes React
-│   ├── auth/           # Autenticación
-│   ├── map/            # Componentes del mapa
-│   ├── onboarding/     # Flujo de onboarding
-│   ├── sidebar/        # Tabs del sidebar
-│   └── ui/             # Componentes shadcn/ui
-├── hooks/              # Custom hooks
-│   ├── useAuth.ts      # Hook de autenticación
-│   ├── useFarmLayers.ts
-│   └── useSTIData.ts
-├── pages/              # Páginas/rutas
+├── components/        # React components
+│   ├── auth/         # Login, register, auth guards
+│   ├── map/          # Map, layers, drawing tools
+│   ├── sidebar/      # Dashboard tabs (farm, risks, chat)
+│   ├── landing/      # Public landing page
+│   └── ui/           # shadcn/ui components
+├── pages/            # Page routes
 │   ├── Dashboard.tsx
 │   ├── Landing.tsx
 │   ├── Login.tsx
-│   └── Onboarding.tsx
-├── services/           # Servicios de API
-│   ├── api.ts          # API principal (mock/real)
-│   └── backendApi.ts   # Conexión con backend
-├── store/              # Estado global (Zustand)
-│   └── useAppStore.ts
-├── types/              # Tipos TypeScript
-└── utils/              # Utilidades
+│   ├── Onboarding.tsx
+│   └── UserProfile.tsx
+├── hooks/            # Custom React hooks
+├── services/         # API calls, auth
+├── store/            # Zustand state management
+├── types/            # TypeScript interfaces
+└── utils/            # Helpers
 ```
 
----
-
-## ☁️ Deploy en AWS
-
-### Opción 1: S3 + CloudFront (Recomendado)
+## Development
 
 ```bash
-# Build para producción
-npm run build
-
-# Subir a S3
-aws s3 sync dist/ s3://tu-bucket-frontend --delete
-
-# Invalidar cache de CloudFront
-aws cloudfront create-invalidation --distribution-id XXXXX --paths "/*"
-```
-
-### Opción 2: Amplify
-
-1. Conecta tu repo en AWS Amplify Console
-2. Configura las variables de entorno
-3. Deploy automático en cada push
-
-### Variables de entorno en producción
-
-En AWS, configura estas variables:
-
-```
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGc...
-VITE_USE_MOCK_DATA=false
-VITE_API_URL=https://api.tudominio.com
-```
-
----
-
-## 🛠️ Desarrollo
-
-```bash
-# Desarrollo con hot reload
+# Start dev server
 npm run dev
 
-# Build de producción
+# Build for production
 npm run build
 
-# Preview del build
+# Preview production build
 npm run preview
 
 # Linting
 npm run lint
+
+# Run tests
+npm run test
+
+# Docker build
+npm run docker:build
+npm run docker:run
 ```
 
----
+## API Integration
 
-## 📝 Licencia
+Backend API expected endpoints:
 
-Este proyecto es privado y confidencial.
+```
+POST   /auth/login              - User login
+POST   /auth/signup             - Register new user
+GET    /profiles/:id            - Get user profile
+PUT    /profiles/:id            - Update profile
+GET    /parcels                 - List user's parcels
+POST   /parcels                 - Create parcel
+GET    /parcels/:id             - Get parcel details
+PUT    /parcels/:id             - Update parcel
+DELETE /parcels/:id             - Delete parcel
+POST   /parcels/:id/paddocks    - Add paddock to parcel
+PUT    /paddocks/:id            - Update paddock
+DELETE /paddocks/:id            - Delete paddock
+GET    /risks/heatmap           - Get risk layer data
+GET    /risks/forecast          - Forecast risks for parcel
+POST   /chat/message            - Send message to AI
+GET    /chat/history            - Get chat history
+```
 
----
+## Deployment
 
-## 🤝 Soporte
+### AWS S3 + CloudFront
 
-Para preguntas o soporte, contacta al equipo de desarrollo.
+```bash
+npm run build
+aws s3 sync dist/ s3://your-bucket --delete
+aws cloudfront create-invalidation --distribution-id XXXXX --paths "/*"
+```
+
+### AWS Amplify
+
+1. Connect GitHub repo to AWS Amplify Console
+2. Set environment variables
+3. Deploy on push
+
+### Environment in Production
+
+Set these in your hosting environment:
+
+```
+VITE_API_URL=https://api.yourdomain.com
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=xxxxx
+VITE_USE_MOCK_DATA=false
+```
+
+## Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, Framer Motion
+- **UI Components**: shadcn/ui, Radix UI
+- **Maps**: Leaflet, React Leaflet, Leaflet Draw
+- **State**: Zustand
+- **Forms**: React Hook Form, Zod validation
+- **Charts**: Recharts
+- **Tables**: TanStack React Table
+- **HTTP**: TanStack React Query
+- **Auth**: Supabase or AWS Cognito
+- **Database**: PostgreSQL (via Supabase)
+- **Testing**: Vitest, Testing Library
+- **Linting**: ESLint
+
+## Contributing
+
+1. Create feature branch: `git checkout -b feature/name`
+2. Make changes and test
+3. Push to branch
+4. Create pull request
+
+## License
+
+Proprietary - Confidential
+
+## Support
+
+For questions, contact the development team.
